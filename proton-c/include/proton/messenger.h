@@ -1028,6 +1028,10 @@ PN_EXTERN int
 pn_messenger_set_ssl_peer_authentication_mode(pn_messenger_t *messenger,
                                               const pn_ssl_verify_mode_t mode);
 
+PN_EXTERN int
+pn_messenger_set_client_sasl_mechanism(pn_messenger_t *messenger,
+                                       const char* mechanism);
+
 #ifdef __cplusplus
 }
 #endif
