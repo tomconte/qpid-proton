@@ -655,7 +655,7 @@ pn_messenger_t *pn_messenger(const char *name)
     m->rewritten = pn_string(NULL);
     m->domain = pn_string(NULL);
 	m->domain = pn_string(NULL);
-	m->client_sasl_mechanism = (char*)"ANONYMOUS";
+    m->client_sasl_mechanism = pn_strdup("ANONYMOUS");
     m->connection_error = 0;
     m->flags = 0;
     m->snd_settle_mode = PN_SND_SETTLED;
@@ -810,6 +810,7 @@ void pn_messenger_free(pn_messenger_t *messenger)
     free(messenger->private_key);
     free(messenger->password);
     free(messenger->trusted_certificates);
+    free(messenger->client_sasl_mechanism);
     pni_reclaim(messenger);
     pn_free(messenger->pending);
     pn_selectable_free(messenger->interruptor);
@@ -2407,8 +2408,14 @@ PN_EXTERN int
 pn_messenger_set_client_sasl_mechanism(pn_messenger_t *messenger,
                                        const char* mechanism)
 {
-	if (!messenger)
+    if ((!messenger) || (mechanism == NULL))
 		return PN_ARG_ERR;
-	messenger->client_sasl_mechanism = pn_strdup(mechanism);
-	return 0;
+    else 
+    {
+        if (messenger->client_sasl_mechanism != NULL)
+        {
+            free(messenger->client_sasl_mechanism);
+        }
+        return (messenger->client_sasl_mechanism = pn_strdup(mechanism)) != NULL ? 0 : PN_ERR;
+    }
 }
