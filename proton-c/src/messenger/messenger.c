@@ -654,7 +654,6 @@ pn_messenger_t *pn_messenger(const char *name)
     m->original = pn_string(NULL);
     m->rewritten = pn_string(NULL);
     m->domain = pn_string(NULL);
-	m->domain = pn_string(NULL);
     m->client_sasl_mechanism = pn_strdup("ANONYMOUS");
     m->connection_error = 0;
     m->flags = 0;
