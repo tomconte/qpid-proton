@@ -44,6 +44,7 @@
 #include <openssl/ssl.h>
 #include <openssl/dh.h>
 #include <openssl/err.h>
+#include <openssl/engine.h>
 #include <openssl/x509v3.h>
 #include <sys/types.h>
 #include <sys/stat.h>
