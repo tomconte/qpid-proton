@@ -530,7 +530,7 @@ void pn_ssl_domain_free( pn_ssl_domain_t *domain )
 
   if (nDomains == 0)
   {
-      EVP_Cleanup();
+      EVP_cleanup();
       ERR_free_strings();
   }
 }
