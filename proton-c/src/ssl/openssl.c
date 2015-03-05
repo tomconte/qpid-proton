@@ -57,7 +57,6 @@
  * This file contains an OpenSSL-based implemention of the SSL/TLS API.
  */
 
-static int ssl_initialized;
 static int ssl_ex_data_index;
 
 typedef enum { UNKNOWN_CONNECTION, SSL_CONNECTION, CLEAR_CONNECTION } connection_mode_t;
@@ -432,13 +431,13 @@ static void ssl_session_free( pn_ssl_session_t *ssn)
   }
 }
 
+static int nDomains = 0;
 
 /** Public API - visible to application code */
-
 pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
 {
-  if (!ssl_initialized) {
-    ssl_initialized = 1;
+    if (nDomains == 0)
+  {
     SSL_library_init();
     SSL_load_error_strings();
     OpenSSL_add_all_algorithms();
@@ -450,6 +449,7 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
   if (!domain) return NULL;
 
   domain->ref_count = 1;
+  nDomains++;
   domain->mode = mode;
 
   // enable all supported protocol versions, then explicitly disable the
@@ -513,6 +513,7 @@ void pn_ssl_domain_free( pn_ssl_domain_t *domain )
 {
   if (--domain->ref_count == 0) {
 
+      nDomains--;
     pn_ssl_session_t *ssn = LL_HEAD( domain, ssn_cache );
     while (ssn) {
       pn_ssl_session_t *next = ssn->ssn_cache_next;
@@ -525,6 +526,12 @@ void pn_ssl_domain_free( pn_ssl_domain_t *domain )
     if (domain->keyfile_pw) free(domain->keyfile_pw);
     if (domain->trusted_CAs) free(domain->trusted_CAs);
     free(domain);
+  }
+
+  if (nDomains == 0)
+  {
+      EVP_Cleanup();
+      ERR_free_strings();
   }
 }
 
