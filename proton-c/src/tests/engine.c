@@ -142,7 +142,7 @@ int test_free_connection(int argc, char **argv)
 
     // transfer some data across the link:
     pn_link_flow(rx, 10);
-    pn_delivery_t *d1 = pn_delivery(tx, pn_dtag("tag-1", 6));
+    pn_delivery_t *d1 = pn_delivery(tx, pn_dtag("tag-1", 6, (pn_format_t)0));
     while (pump(t1, t2)) {
         process_endpoints(c1);
         process_endpoints(c2);
@@ -196,7 +196,7 @@ int test_free_session(int argc, char **argv)
 
     // prepare for transfer: request some credit
     pn_link_flow(rx, 10);
-    pn_delivery_t *d1 = pn_delivery(tx, pn_dtag("tag-1", 6));
+    pn_delivery_t *d1 = pn_delivery(tx, pn_dtag("tag-1", 6, (pn_format_t)0));
     while (pump(t1, t2)) {
         process_endpoints(c1);
         process_endpoints(c2);
@@ -256,7 +256,7 @@ int test_free_link(int argc, char **argv)
 
     // prepare for transfer: request some credit
     pn_link_flow(rx, 10);
-    pn_delivery_t *d1 = pn_delivery(tx, pn_dtag("tag-1", 6));
+    pn_delivery_t *d1 = pn_delivery(tx, pn_dtag("tag-1", 6, (pn_format_t)0));
     while (pump(t1, t2)) {
         process_endpoints(c1);
         process_endpoints(c2);

@@ -28,6 +28,8 @@
 #include <stddef.h>
 #include <sys/types.h>
 
+#include <proton/message.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -46,6 +48,7 @@ extern "C" {
  * An AMQP delivery tag.
  */
 typedef struct pn_delivery_tag_t {
+  pn_format_t format;
   size_t size;
   const char *bytes;
 } pn_delivery_tag_t;
@@ -58,8 +61,8 @@ typedef struct pn_delivery_tag_t {
  * @param[in] size the size of the tag
  * @return the delivery tag
  */
-static inline pn_delivery_tag_t pn_dtag(const char *bytes, size_t size) {
-  pn_delivery_tag_t dtag = {size, bytes};
+static inline pn_delivery_tag_t pn_dtag(const char *bytes, size_t size, pn_format_t format) {
+    pn_delivery_tag_t dtag = {format, size, bytes };
   return dtag;
 }
 #endif

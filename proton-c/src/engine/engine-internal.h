@@ -274,6 +274,7 @@ struct pn_delivery_t {
   pn_disposition_t remote;
   pn_link_t *link;  // reference counted
   pn_buffer_t *tag;
+  pn_format_t format;
   pn_delivery_t *unsettled_next;
   pn_delivery_t *unsettled_prev;
   pn_delivery_t *settled_next;

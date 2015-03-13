@@ -189,7 +189,7 @@ void server_callback(pn_connector_t *ctor)
     if (pn_link_is_receiver(link)) {
       pn_link_flow(link, 100);
     } else {
-      pn_delivery(link, pn_dtag("blah", 4));
+      pn_delivery(link, pn_dtag("blah", 4, (pn_format_t)0));
     }
 
     link = pn_link_next(link, PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE);
@@ -224,7 +224,7 @@ void server_callback(pn_connector_t *ctor)
         if (!ctx->quiet) printf("sent delivery: %s\n", tagstr);
         char tagbuf[16];
         sprintf(tagbuf, "%i", ctx->count++);
-        pn_delivery(link, pn_dtag(tagbuf, strlen(tagbuf)));
+        pn_delivery(link, pn_dtag(tagbuf, strlen(tagbuf), (pn_format_t)0));
       }
     }
 
@@ -339,7 +339,7 @@ void client_callback(pn_connector_t *ctor)
       char buf[16];
       for (int i = 0; i < ctx->send_count; i++) {
         sprintf(buf, "%x", i);
-        pn_delivery(snd, pn_dtag(buf, strlen(buf)));
+        pn_delivery(snd, pn_dtag(buf, strlen(buf), (pn_format_t)0));
       }
     }
 
