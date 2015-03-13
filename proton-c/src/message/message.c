@@ -880,6 +880,7 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
                               pn_data_free(temp);
                               pn_data_clear(msg->data);
                               pn_error_format(msg->error, -__LINE__, "pn_data_append failed, returned %d", (int)i);
+                              return err;
                           }
                       }
                   }
