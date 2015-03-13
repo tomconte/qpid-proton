@@ -2409,7 +2409,9 @@ pn_messenger_set_client_sasl_mechanism(pn_messenger_t *messenger,
                                        const char* mechanism)
 {
     if ((!messenger) || (mechanism == NULL))
-		return PN_ARG_ERR;
+    {
+        return PN_ARG_ERR;
+    }
     else 
     {
         if (messenger->client_sasl_mechanism != NULL)
