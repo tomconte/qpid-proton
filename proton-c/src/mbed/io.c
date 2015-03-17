@@ -30,15 +30,13 @@
 #include <stdio.h>
 #include <netdb.h>
 #include <assert.h>
+#include <stdbool.h>
 
 #include "platform.h"
 
-#define MAX_HOST (1024)
-#define MAX_SERV (64)
+#define RECV_TIMEOUT_IN_MS	1000 /* ms */
 
 struct pn_io_t {
-	char host[MAX_HOST];
-	char serv[MAX_SERV];
 	pn_error_t *error;
 	pn_selector_t *selector;
 	bool wouldblock;
@@ -82,11 +80,21 @@ pn_error_t *pn_io_error(pn_io_t *io)
 
 int pn_pipe(pn_io_t *io, pn_socket_t *dest)
 {
+	(void)io;
+	(void)dest;
+
+	/* For MBED TcpSocketConnection IO we shall not use a pipe at all, due to the fact
+	that the person writing this comment does not clearly understand from the existing docs
+	what this function should do. Thus a decision was made to have a very rough shortcut here. */
 	return 0;
 }
 
 pn_socket_t pn_listen(pn_io_t *io, const char *host, const char *port)
 {
+	(void)io;
+	(void)host;
+	(void)port;
+
 	LOG_FUNC_START("pn_listen");
 
 	/* server mode not implemented for mbed */
@@ -100,31 +108,53 @@ pn_socket_t pn_listen(pn_io_t *io, const char *host, const char *port)
 pn_socket_t pn_connect(pn_io_t *io, const char *host, const char *port)
 {
 	int portInt;
-	TCPSOCKETCONNECTION_HANDLE tcpConnectionHandle;
+	pn_socket_t result;
 
 	LOG_FUNC_START("pn_connect");
 
-	portInt = atoi(port);
-
-	tcpConnectionHandle = tcpsocketconnection_create();
-	if (tcpConnectionHandle == NULL)
+	if ((io == NULL) || (port == NULL) || (host == NULL))
 	{
-		return PN_INVALID_SOCKET;
+		LOG_ERROR("NULL argument, io=%p, host=%p, port=%p\r\n", io, host, port);
+		result = PN_INVALID_SOCKET;
 	}
-
-	if (tcpsocketconnection_connect(tcpConnectionHandle, host, portInt) != 0)
+	else
 	{
-		tcpsocketconnection_destroy(tcpConnectionHandle);
-		return PN_INVALID_SOCKET;
+		TCPSOCKETCONNECTION_HANDLE tcpConnectionHandle;
+		portInt = atoi(port);
+
+		tcpConnectionHandle = tcpsocketconnection_create();
+		if (tcpConnectionHandle == NULL)
+		{
+			LOG_ERROR("Cannot create socket\r\n");
+			result = PN_INVALID_SOCKET;
+		}
+		else
+		{
+			if (tcpsocketconnection_connect(tcpConnectionHandle, host, portInt) != 0)
+			{
+				tcpsocketconnection_destroy(tcpConnectionHandle);
+				result = PN_INVALID_SOCKET;
+				LOG_ERROR("Cannot connect socket\r\n");
+			}
+			else
+			{
+				result = (pn_socket_t)tcpConnectionHandle;
+			}
+		}
 	}
 
 	LOG_FUNC_END("pn_connect");
 
-	return (pn_socket_t)tcpConnectionHandle;
+	return result;
 }
 
 pn_socket_t pn_accept(pn_io_t *io, pn_socket_t socket, char *name, size_t size)
 {
+	(void)io;
+	(void)socket;
+	(void)name;
+	(void)size;
+
 	LOG_FUNC_START("pn_accept");
 
 	/* server mode not implemented for mbed */
@@ -137,12 +167,21 @@ pn_socket_t pn_accept(pn_io_t *io, pn_socket_t socket, char *name, size_t size)
 
 ssize_t pn_send(pn_io_t *io, pn_socket_t socket, const void *buf, size_t len)
 {
-	LOG_FUNC_START("pn_send");
+	ssize_t count;
 
-	LOG_VERBOSE("pn_send, %d bytes, tcp handle = %p\r\n", (int)len, (void*)socket);
-	ssize_t count = (ssize_t)tcpsocketconnection_send((TCPSOCKETCONNECTION_HANDLE)socket, (char*)buf, len);
-	LOG_VERBOSE("pn_send, result = %d\r\n", (int)count);
-	io->wouldblock = count < 0;
+	LOG_FUNC_START("pn_send");
+	if ((io == NULL) || (socket == NULL) || (buf == NULL))
+	{
+		LOG_ERROR("NULL argument, io=%p, socket=%p, buf=%p\r\n", io, socket, buf);
+		count = -1;
+	}
+	else
+	{
+		LOG_VERBOSE("pn_send, %d bytes, tcp handle = %p\r\n", (int)len, (void*)socket);
+		count = (ssize_t)tcpsocketconnection_send((TCPSOCKETCONNECTION_HANDLE)socket, (char*)buf, len);
+		LOG_VERBOSE("pn_send, result = %d\r\n", (int)count);
+		io->wouldblock = count < 0;
+	}
 
 	LOG_FUNC_END("pn_send");
 
@@ -151,35 +190,56 @@ ssize_t pn_send(pn_io_t *io, pn_socket_t socket, const void *buf, size_t len)
 
 ssize_t pn_recv(pn_io_t *io, pn_socket_t socket, void *buf, size_t size)
 {
-	LOG_FUNC_START("pn_recv");
-	LOG_VERBOSE("Requested to receive %d bytes\r\n", (int)size);
-	int count = 0;
+	ssize_t count;
 
-	tcpsocketconnection_set_blocking((TCPSOCKETCONNECTION_HANDLE)socket, false, 1000);
-	count = 0;
-	while (1)
+	LOG_FUNC_START("pn_recv");
+
+	if ((io == NULL) || (socket == NULL) || (buf == NULL))
 	{
-		int res = tcpsocketconnection_receive((TCPSOCKETCONNECTION_HANDLE)socket, (char*)buf + count, 1);
-		if (res <= 0)
+		LOG_ERROR("NULL argument, io=%p, socket=%p, buf=%p\r\n", io, socket, buf);
+		count = -1;
+	}
+	else
+	{
+		LOG_VERBOSE("Requested to receive %d bytes\r\n", (int)size);
+
+		tcpsocketconnection_set_blocking((TCPSOCKETCONNECTION_HANDLE)socket, false, RECV_TIMEOUT_IN_MS);
+		count = 0;
+		while (1)
 		{
-			break;
+			int res = tcpsocketconnection_receive((TCPSOCKETCONNECTION_HANDLE)socket, (char*)buf + count, 1);
+			if (res <= 0)
+			{
+				break;
+			}
+			count++;
 		}
-		count++;
+
+		LOG_VERBOSE("received %d bytes\r\n", (int)count);
+		io->wouldblock = false;
 	}
 
-	LOG_VERBOSE("received %d bytes\r\n", (int)count);
-	io->wouldblock = count < 0;
-
 	LOG_FUNC_END("pn_recv");
-	return (count < 0) ? 0 : count;
+
+	return count;
 }
 
 ssize_t pn_write(pn_io_t *io, pn_socket_t socket, const void *buf, size_t size)
 {
 	ssize_t result;
 	LOG_FUNC_START("pn_write");
-	LOG_VERBOSE("pn_write, %d bytes\r\n", (int)size);
-	result = (ssize_t)tcpsocketconnection_send((TCPSOCKETCONNECTION_HANDLE)socket, (char*)buf, size);
+
+	if ((io == NULL) || (socket == NULL) || (buf == NULL))
+	{
+		LOG_ERROR("NULL argument, io=%p, socket=%p, buf=%p\r\n", io, socket, buf);
+		result = -1;
+	}
+	else
+	{
+		LOG_VERBOSE("pn_write, %d bytes\r\n", (int)size);
+		result = (ssize_t)tcpsocketconnection_send((TCPSOCKETCONNECTION_HANDLE)socket, (char*)buf, size);
+	}
+
 	LOG_FUNC_END("pn_write");
 	return result;
 }
@@ -197,18 +257,53 @@ ssize_t pn_read(pn_io_t *io, pn_socket_t socket, void *buf, size_t size)
 void pn_close(pn_io_t *io, pn_socket_t socket)
 {
 	LOG_FUNC_START("pn_close");
-	tcpsocketconnection_destroy((TCPSOCKETCONNECTION_HANDLE)socket);
+	if ((io == NULL) || (socket == NULL))
+	{
+		LOG_ERROR("NULL argument, io=%p, socket=%p\r\n", io, socket);
+	}
+	else
+	{
+		tcpsocketconnection_destroy((TCPSOCKETCONNECTION_HANDLE)socket);
+	}
+
 	LOG_FUNC_END("pn_close");
 }
 
 bool pn_wouldblock(pn_io_t *io)
 {
-	return io->wouldblock;
+	bool result;
+
+	if (io == NULL)
+	{
+		LOG_ERROR("NULL argument, io=%p\r\n", io);
+		result = false;
+	}
+	else
+	{
+		result = io->wouldblock;
+	}
+
+	return result;
 }
 
-pn_selector_t *pn_io_selector(pn_io_t *io)
+pn_selector_t* pn_io_selector(pn_io_t *io)
 {
-	if (io->selector == NULL)
-		io->selector = pni_selector();
-	return io->selector;
+	pn_selector_t* result;
+
+	if (io == NULL)
+	{
+		LOG_ERROR("NULL argument, io=%p\r\n", io);
+		result = NULL;
+	}
+	else
+	{
+		if (io->selector == NULL)
+		{
+			io->selector = pni_selector();
+		}
+
+		result = io->selector;
+	}
+
+	return result;
 }

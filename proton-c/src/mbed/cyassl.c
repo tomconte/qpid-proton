@@ -32,9 +32,6 @@
 
 #define APP_BUF_SIZE    (1024)
 
-static size_t inBytes = 0;
-
-
 static bool sslDomainInitialized = false;
 
 /*------------------------------------------------------------------------------
@@ -64,6 +61,7 @@ struct pn_ssl_t {
 	unsigned char outputBuffer[APP_BUF_SIZE];
 	unsigned char decrypted[APP_BUF_SIZE];
 	size_t outBytes;
+	size_t inBytes;
 	size_t appBytesPos;
 
 	pn_trace_t trace;
@@ -79,7 +77,7 @@ static int SocketReceive(CYASSL* cyassl, char *buf, int sz, void* ctx)
 	int i;
 	pn_ssl_t* pnssl = (pn_ssl_t*)ctx;
 
-	mbed_log("cyassl=%p, ctx=%p, sz=%d, inBytes=%d\r\n", cyassl, ctx, sz, inBytes);
+	mbed_log("cyassl=%p, ctx=%p, sz=%d, inBytes=%d\r\n", cyassl, ctx, sz, pnssl->inBytes);
 	LOG_FUNC_START("SocketReceive");
 	LOG_VERBOSE("ctx=%p, sz=%d, inBytes=%d\r\n", ctx, sz, inBytes);
 
@@ -97,20 +95,20 @@ static int SocketReceive(CYASSL* cyassl, char *buf, int sz, void* ctx)
 	}
 	else
 	{
-		if (sz > inBytes)
+		if (sz > pnssl->inBytes)
 		{
-			n = inBytes;
+			n = pnssl->inBytes;
 		}
 		else
 		{
 			n = sz;
 		}
 		memcpy(buf, pnssl->inputBuffer, n);
-		if (inBytes > n)
+		if (pnssl->inBytes > n)
 		{
-			memmove(pnssl->inputBuffer, pnssl->inputBuffer + n, inBytes - n);
+			memmove(pnssl->inputBuffer, pnssl->inputBuffer + n, pnssl->inBytes - n);
 		}
-		inBytes -= n;
+		pnssl->inBytes -= n;
 
 		if (n == 0)
 		{
@@ -187,6 +185,7 @@ pn_ssl_t *pn_ssl(pn_transport_t *transport)
 	else
 	{
 		ssl->handshakeDone = false;
+		ssl->inBytes = 0;
 		ssl->outBytes = 0;
 		ssl->appBytesPos = 0;
 		ssl->ssl = NULL;
@@ -195,7 +194,7 @@ pn_ssl_t *pn_ssl(pn_transport_t *transport)
 		ssl->trace = NULL;
 
 		transport->ssl = (pni_ssl_t*)ssl;
-		LOG_VERBOSE("returning %p with domain %p\r\n", ssl, ssl->domain);
+		LOG_VERBOSE("returning %p\r\n", ssl);
 	}
 
 	LOG_FUNC_END("pn_ssl");
@@ -308,8 +307,8 @@ ssize_t pn_ssl_input(struct pn_transport_t *transport, unsigned int layer, const
 
 	LOG_FUNC_START("pn_ssl_input");
 	LOG_VERBOSE("ssl_input got %d bytes as input\r\n", (int)len);
-	memcpy(ssl->inputBuffer + inBytes, input_data, len);
-	inBytes += len;
+	memcpy(ssl->inputBuffer + ssl->inBytes, input_data, len);
+	ssl->inBytes += len;
 
 	while (true)
 	{

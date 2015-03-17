@@ -19,8 +19,8 @@
 *
 */
 
-#ifndef MBED_LOGGING_H
-#define MBED_LOGGING_H
+#ifndef LOGGING_H
+#define LOGGING_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,11 +40,11 @@ extern int mbed_log(const char*, ...);
 extern void mbed_log_buffer(const void* data, int length);
 
 #ifdef LOG_FUNC_CALLS_ENABLED
-#define LOG_FUNC_START(A) mbed_log(A "- Start\r\n")
-#define LOG_FUNC_END(A) mbed_log(A "- End\r\n")
+#define LOG_FUNC_START(name) mbed_log(name "- Start\r\n")
+#define LOG_FUNC_END(name) mbed_log(name "- End\r\n")
 #else /* LOG_FUNC_CALLS_ENABLED */
-#define LOG_FUNC_START(A)
-#define LOG_FUNC_END(A)
+#define LOG_FUNC_START(name)
+#define LOG_FUNC_END(name)
 #endif
 
 #ifdef LOG_INFO_ENABLED
@@ -71,4 +71,4 @@ extern void mbed_log_buffer(const void* data, int length);
 }
 #endif
 
-#endif /* MBED_LOGGING_H */
+#endif /* LOGGING_H */

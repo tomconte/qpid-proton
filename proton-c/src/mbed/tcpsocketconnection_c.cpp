@@ -36,7 +36,6 @@ TCPSOCKETCONNECTION_HANDLE tcpsocketconnection_create(void)
 {
 	TCPSocketConnection* sock = new TCPSocketConnection();
 	connHandle = (TCPSOCKETCONNECTION_HANDLE)sock;
-	sock->set_blocking(false, 5000);
 	return connHandle;
 }
 
@@ -64,22 +63,22 @@ bool tcpsocketconnection_is_connected(TCPSOCKETCONNECTION_HANDLE tcpSocketConnec
 	return tsc->is_connected();
 }
 
-int tcpsocketconnection_send(TCPSOCKETCONNECTION_HANDLE tcpSocketConnectionHandle, char* data, int length)
+int tcpsocketconnection_send(TCPSOCKETCONNECTION_HANDLE tcpSocketConnectionHandle, const char* data, int length)
 {
 	TCPSocketConnection* tsc = (TCPSocketConnection*)tcpSocketConnectionHandle;
 	LOG_VERBOSE("Send: %d bytes\r\n", length);
 	LOG_BUFFER(data, length);
-	int result = tsc->send(data, length);
+	int result = tsc->send((char*)data, length);
 	LOG_VERBOSE("Send done\r\n");
 	return result;
 }
 
-int tcpsocketconnection_send_all(TCPSOCKETCONNECTION_HANDLE tcpSocketConnectionHandle, char* data, int length)
+int tcpsocketconnection_send_all(TCPSOCKETCONNECTION_HANDLE tcpSocketConnectionHandle, const char* data, int length)
 {
 	TCPSocketConnection* tsc = (TCPSocketConnection*)tcpSocketConnectionHandle;
 	LOG_VERBOSE("Send all: %d bytes\r\n", length);
 	LOG_BUFFER(data, length);
-	return tsc->send_all(data, length);
+	return tsc->send_all((char*)data, length);
 }
 
 int tcpsocketconnection_receive(TCPSOCKETCONNECTION_HANDLE tcpSocketConnectionHandle, char* data, int length)

@@ -24,30 +24,39 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-Serial pc(USBTX, USBRX);
+static Serial pc(USBTX, USBRX);
 
 extern "C" void mbed_log_init(void)
 {
 	pc.baud(115200);
 }
 
-extern "C" int mbed_log(const char* format, ...)
+int mbed_log(const char* format, ...)
 {
-	char logLine[256];
+	char* logLine = (char*)malloc(256);
 	int result;
 
-	va_list args;
-	va_start(args, format);
-	result = vsprintf(logLine, format, args);
-	pc.printf(logLine);
-	va_end(args);
+	if (logLine != NULL)
+	{
+		va_list args;
+		va_start(args, format);
+		result = vsprintf(logLine, format, args);
+		pc.printf(logLine);
+		va_end(args);
+
+		free(logLine);
+	}
+	else
+	{
+		result = -1;
+	}
 
 	return result;
 }
 
-extern "C" void mbed_log_buffer(const void* data, int length)
+void mbed_log_buffer(const void* data, size_t length)
 {
-	int i;
+	size_t i;
 
 	for (i = 0; i < length; i++)
 	{

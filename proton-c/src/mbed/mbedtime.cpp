@@ -23,7 +23,7 @@
 #include "mbedtime.h"
 #include "Timer.h"
 
-Timer timer;
+static Timer timer;
 
 extern "C" void mbedtime_init(void)
 {

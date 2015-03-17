@@ -35,17 +35,10 @@ char* pn_i_genuuid(void)
 	return NULL;
 }
 
-static void pn_i_strerror(int errnum, char *buf, size_t buflen)
-{
-	strncpy(buf, strerror(errnum), buflen);
-}
-
 int pn_i_error_from_errno(pn_error_t *error, const char *msg)
 {
-	char err[1024];
-	pn_i_strerror(errno, err, 1024);
 	int code = PN_ERR;
-	return pn_error_format(error, code, "%s: %s", msg, err);
+	return pn_error_format(error, code, "%s: %s", msg, strerror(errno));
 }
 
 int64_t pn_i_atoll(const char* num)
