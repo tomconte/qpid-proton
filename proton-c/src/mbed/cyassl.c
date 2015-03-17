@@ -79,7 +79,7 @@ static int SocketReceive(CYASSL* cyassl, char *buf, int sz, void* ctx)
 
 	mbed_log("cyassl=%p, ctx=%p, sz=%d, inBytes=%d\r\n", cyassl, ctx, sz, pnssl->inBytes);
 	LOG_FUNC_START("SocketReceive");
-	LOG_VERBOSE("ctx=%p, sz=%d, inBytes=%d\r\n", ctx, sz, inBytes);
+	LOG_VERBOSE("ctx=%p, sz=%d, inBytes=%d\r\n", ctx, sz, pnssl->inBytes);
 
 	if (pnssl->handshakeDone == false)
 	{
@@ -312,7 +312,7 @@ ssize_t pn_ssl_input(struct pn_transport_t *transport, unsigned int layer, const
 
 	while (true)
 	{
-		LOG_VERBOSE("inBytes=%d\r\n", (int)inBytes);
+		LOG_VERBOSE("inBytes=%d\r\n", (int)ssl->inBytes);
 		if (CyaSSL_peek(ssl->ssl, ssl->decrypted + ssl->appBytesPos, 1) > 0)
 		{
 			int res = CyaSSL_read(ssl->ssl, ssl->decrypted + ssl->appBytesPos, 1);
@@ -335,7 +335,7 @@ ssize_t pn_ssl_input(struct pn_transport_t *transport, unsigned int layer, const
 	while (ssl->appBytesPos > 0)
 	{
 		LOG_VERBOSE("App gets %d bytes:\r\n", (int)ssl->appBytesPos);
-		LOG_VERBOSE("Bytes not used: %d bytes:\r\n", (int)inBytes);
+		LOG_VERBOSE("Bytes not used: %d bytes:\r\n", (int)ssl->inBytes);
 		LOG_BUFFER(decrypted, appBytesPos);
 
 		app_bytes_consumed = transport->io_layers[layer + 1]->process_input(transport, layer + 1, (const char*)ssl->decrypted, ssl->appBytesPos);
