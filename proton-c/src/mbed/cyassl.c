@@ -340,14 +340,20 @@ ssize_t pn_ssl_input(struct pn_transport_t *transport, unsigned int layer, const
 
 		app_bytes_consumed = transport->io_layers[layer + 1]->process_input(transport, layer + 1, (const char*)ssl->decrypted, ssl->appBytesPos);
 		LOG_VERBOSE("App consumed bytes %d\r\n", (int)app_bytes_consumed);
-		if ((app_bytes_consumed > 0) &&
-			(ssl->appBytesPos - app_bytes_consumed) > 0)
+		if (app_bytes_consumed < 0)
 		{
-			memmove(ssl->decrypted, ssl->decrypted + app_bytes_consumed, ssl->appBytesPos - app_bytes_consumed);
+			ssl->appBytesPos = 0;
 		}
-		ssl->appBytesPos -= app_bytes_consumed;
+		else
+		{
+			if ((ssl->appBytesPos - app_bytes_consumed) > 0)
+			{
+				memmove(ssl->decrypted, ssl->decrypted + app_bytes_consumed, ssl->appBytesPos - app_bytes_consumed);
+			}
+			ssl->appBytesPos -= app_bytes_consumed;
+		}
 
-		if (app_bytes_consumed == 0)
+		if (app_bytes_consumed <= 0)
 		{
 			break;
 		}
@@ -361,16 +367,21 @@ ssize_t pn_ssl_output(struct pn_transport_t *transport, unsigned int layer, char
 {
 	pn_ssl_t* ssl = (pn_ssl_t*)transport->ssl;
 	LOG_FUNC_START("pn_ssl_output");
-	LOG_VERBOSE("len=%d\r\n", (int)len);
 
 	ssize_t app_bytes = transport->io_layers[layer + 1]->process_output(transport, layer + 1, output_data, len);
-	LOG_VERBOSE("Got %d bytes from upper layer\r\n", (int)app_bytes);
-
-	int encryptedBytes = CyaSSL_write(ssl->ssl, output_data, app_bytes);
-	LOG_VERBOSE("Got %d encrypted bytes\r\n", (int)encryptedBytes);
-	memcpy(output_data, ssl->outputBuffer, ssl->outBytes);
-	len = ssl->outBytes;
-	ssl->outBytes = 0;
+	if (app_bytes > 0)
+	{
+		LOG_VERBOSE("Got %d bytes from upper layer\r\n", (int)app_bytes);
+		int encryptedBytes = CyaSSL_write(ssl->ssl, output_data, app_bytes);
+		LOG_VERBOSE("Got %d encrypted bytes\r\n", (int)encryptedBytes);
+		memcpy(output_data, ssl->outputBuffer, ssl->outBytes);
+		len = ssl->outBytes;
+		ssl->outBytes = 0;
+	}
+	else
+	{
+		len = 0;
+	}
 
 	LOG_FUNC_END("pn_ssl_output");
 
