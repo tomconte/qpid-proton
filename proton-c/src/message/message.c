@@ -34,7 +34,7 @@
 
 ssize_t pn_message_data(char *dst, size_t available, const char *src, size_t size)
 {
-  pn_data_t *data = pn_data(16);
+  pn_data_t *data = pn_data(0);
   pn_data_put_described(data);
   pn_data_enter(data);
   pn_data_put_long(data, 0x75);
@@ -342,11 +342,11 @@ pn_message_t *pn_message()
   msg->reply_to_group_id = pn_string(NULL);
 
   msg->inferred = false;
-  msg->data = pn_data(16);
-  msg->instructions = pn_data(16);
-  msg->annotations = pn_data(16);
-  msg->properties = pn_data(16);
-  msg->body = pn_data(16);
+  msg->data = pn_data(0);
+  msg->instructions = pn_data(0);
+  msg->annotations = pn_data(0);
+  msg->properties = pn_data(0);
+  msg->body = pn_data(0);
 
   msg->parser = NULL;
   msg->error = pn_error();

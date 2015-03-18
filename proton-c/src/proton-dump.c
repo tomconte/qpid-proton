@@ -43,7 +43,7 @@ int dump(const char *file)
   if (!in) fatal_error("proton-dump: dump: opening %s", file, errno);
 
   pn_buffer_t *buf = pn_buffer(1024);
-  pn_data_t *data = pn_data(16);
+  pn_data_t *data = pn_data(0);
   bool header = false;
 
   char bytes[1024];
