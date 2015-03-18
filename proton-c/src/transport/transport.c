@@ -340,7 +340,7 @@ static void pn_transport_initialize(void *object)
   transport->scratch = pn_string(NULL);
   transport->args = pn_data(16);
   transport->output_args = pn_data(16);
-  transport->frame = pn_buffer(4*1024);
+  transport->frame = pn_buffer(256);
   transport->input_frames_ct = 0;
   transport->output_frames_ct = 0;
 
