@@ -21,6 +21,7 @@
 
 #include <proton/messenger.h>
 
+#include <proton/message.h>
 #include <proton/connection.h>
 #include <proton/delivery.h>
 #include <proton/event.h>
@@ -72,6 +73,7 @@ struct pn_messenger_t {
   char *private_key;
   char *password;
   char *trusted_certificates;
+  char *client_sasl_mechanism;
   pn_io_t *io;
   pn_list_t *pending; // pending selectables
   pn_selectable_t *interruptor;
@@ -615,6 +617,7 @@ pn_messenger_t *pn_messenger(const char *name)
     m->original = pn_string(NULL);
     m->rewritten = pn_string(NULL);
     m->domain = pn_string(NULL);
+    m->client_sasl_mechanism = pn_strdup("ANONYMOUS");
     m->connection_error = 0;
     m->flags = 0;
     m->snd_settle_mode = PN_SND_SETTLED;
@@ -769,6 +772,7 @@ void pn_messenger_free(pn_messenger_t *messenger)
     free(messenger->private_key);
     free(messenger->password);
     free(messenger->trusted_certificates);
+    free(messenger->client_sasl_mechanism);
     pni_reclaim(messenger);
     pn_free(messenger->pending);
     pn_selectable_free(messenger->interruptor);
@@ -925,7 +929,7 @@ static int pn_transport_config(pn_messenger_t *messenger,
     if (ctx->pass) {
       pn_sasl_plain(sasl, ctx->user, ctx->pass);
     } else {
-      pn_sasl_mechanisms(sasl, "ANONYMOUS");
+    pn_sasl_mechanisms(sasl, messenger->client_sasl_mechanism);
     }
   }
 
@@ -1160,14 +1164,14 @@ void pn_messenger_process_link(pn_messenger_t *messenger, pn_event_t *event)
   }
 }
 
-int pni_pump_out(pn_messenger_t *messenger, const char *address, pn_link_t *sender);
+int pni_pump_out(pn_messenger_t *messenger, const char *address, pn_link_t *sender, pn_format_t format);
 
 void pn_messenger_process_flow(pn_messenger_t *messenger, pn_event_t *event)
 {
   pn_link_t *link = pn_event_link(event);
 
   if (pn_link_is_sender(link)) {
-    pni_pump_out(messenger, pn_terminus_get_address(pn_link_target(link)), link);
+    pni_pump_out(messenger, pn_terminus_get_address(pn_link_target(link)), link, (pn_format_t)0);
   } else {
     // account for any credit left over after draining links has completed
     if (pn_link_get_drain(link)) {
@@ -1833,7 +1837,7 @@ int pni_bump_out(pn_messenger_t *messenger, const char *address)
   return 0;
 }
 
-int pni_pump_out(pn_messenger_t *messenger, const char *address, pn_link_t *sender)
+int pni_pump_out(pn_messenger_t *messenger, const char *address, pn_link_t *sender, pn_format_t format)
 {
   pni_entry_t *entry = pni_store_get(messenger->outgoing, address);
   if (!entry) {
@@ -1851,7 +1855,7 @@ int pni_pump_out(pn_messenger_t *messenger, const char *address, pn_link_t *send
   void *ptr = &tag;
   uint64_t next = messenger->next_tag++;
   *((uint64_t *) ptr) = next;
-  pn_delivery_t *d = pn_delivery(sender, pn_dtag(tag, 8));
+  pn_delivery_t *d = pn_delivery(sender, pn_dtag(tag, 8, format));
   pni_entry_set_delivery(entry, d);
   ssize_t n = pn_link_send(sender, encoded, size);
   if (n < 0) {
@@ -1951,7 +1955,7 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
           return 0;
         }
       } else {
-        return pni_pump_out(messenger, address, sender);
+          return pni_pump_out(messenger, address, sender, pn_message_get_format(msg));
       }
     }
   }
@@ -2371,4 +2375,22 @@ pn_messenger_set_ssl_peer_authentication_mode(pn_messenger_t *messenger,
     return PN_ARG_ERR;
   messenger->ssl_peer_authentication_mode = mode;
   return 0;
+}
+
+PN_EXTERN int
+pn_messenger_set_client_sasl_mechanism(pn_messenger_t *messenger,
+                                       const char* mechanism)
+{
+    if ((!messenger) || (mechanism == NULL))
+    {
+        return PN_ARG_ERR;
+    }
+    else 
+    {
+        if (messenger->client_sasl_mechanism != NULL)
+        {
+            free(messenger->client_sasl_mechanism);
+        }
+        return (messenger->client_sasl_mechanism = pn_strdup(mechanism)) != NULL ? 0 : PN_ERR;
+    }
 }

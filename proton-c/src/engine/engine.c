@@ -1458,6 +1458,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   pn_incref(delivery->link);  // keep link until finalized
   pn_buffer_clear(delivery->tag);
   pn_buffer_append(delivery->tag, tag.start, tag.size);
+  delivery->format = tag.format;
   pn_disposition_clear(&delivery->local);
   pn_disposition_clear(&delivery->remote);
   delivery->updated = false;
@@ -1644,9 +1645,9 @@ pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery)
 {
   if (delivery) {
     pn_bytes_t tag = pn_buffer_bytes(delivery->tag);
-    return pn_dtag(tag.start, tag.size);
+    return pn_dtag(tag.start, tag.size, delivery->format);
   } else {
-    return pn_dtag(0, 0);
+    return pn_dtag(0, 0, (pn_format_t)0);
   }
 }
 
