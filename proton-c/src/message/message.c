@@ -76,6 +76,7 @@ struct pn_message_t {
   uint32_t delivery_count;
 
   uint8_t priority;
+  uint32_t format;
 
   bool durable;
   bool first_acquirer;
@@ -350,6 +351,8 @@ pn_message_t *pn_message()
 
   msg->parser = NULL;
   msg->error = pn_error();
+  msg->format = 0;
+
   return msg;
 }
 

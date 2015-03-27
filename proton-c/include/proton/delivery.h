@@ -48,9 +48,9 @@ extern "C" {
  * An AMQP delivery tag.
  */
 typedef struct pn_delivery_tag_t {
-  pn_format_t format;
+  uint32_t format;
   size_t size;
-  const char *bytes;
+  const char *start;
 } pn_delivery_tag_t;
 
 #ifndef SWIG  // older versions of SWIG choke on this:
@@ -59,9 +59,10 @@ typedef struct pn_delivery_tag_t {
  *
  * @param[in] bytes a pointer to the beginning of the tag
  * @param[in] size the size of the tag
+ * @param[in] format the message format
  * @return the delivery tag
  */
-static inline pn_delivery_tag_t pn_dtag(const char *bytes, size_t size, pn_format_t format) {
+static inline pn_delivery_tag_t pn_dtag(const char *bytes, size_t size, uint32_t format) {
     pn_delivery_tag_t dtag = {format, size, bytes };
   return dtag;
 }

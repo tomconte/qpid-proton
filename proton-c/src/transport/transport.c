@@ -1297,7 +1297,7 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
       ssn->incoming_deliveries++;
     }
 
-    delivery = pn_delivery(link, pn_dtag(tag.start, tag.size, (pn_format_t)0)); 
+    delivery = pn_delivery(link, pn_dtag(tag.start, tag.size, (uint32_t)0)); 
     pn_delivery_state_t *state = pn_delivery_map_push(incoming, delivery);
     if (id_present && id != state->id) {
       return pn_do_error(transport, "amqp:session:invalid-field",
