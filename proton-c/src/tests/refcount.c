@@ -179,7 +179,7 @@ static void setup(void **objects) {
   pn_incref(ssn);
   pn_link_t *lnk = pn_sender(ssn, "sender");
   pn_incref(lnk);
-  pn_delivery_t *dlv = pn_delivery(lnk, pn_dtag("dtag", 4));
+  pn_delivery_t *dlv = pn_delivery(lnk, pn_dtag("dtag", 4, 0));
   pn_incref(dlv);
 
   assert(pn_refcount(conn) == 2);

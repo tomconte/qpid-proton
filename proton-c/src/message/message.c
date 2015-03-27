@@ -961,12 +961,12 @@ pn_data_t *pn_message_body(pn_message_t *msg)
   return msg ? msg->body : NULL;
 }
 
-pn_format_t pn_message_get_format(pn_message_t *msg)
+uint32_t pn_message_get_format(pn_message_t *msg)
 {
-	return msg ? msg->format : PN_AMQP;
+	return msg ? msg->format : 0;
 }
 
-int pn_message_set_format(pn_message_t *msg, pn_format_t format)
+int pn_message_set_format(pn_message_t *msg, uint32_t format)
 {
 	if (!msg) return PN_ARG_ERR;
 

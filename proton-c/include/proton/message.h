@@ -738,6 +738,16 @@ PN_EXTERN int pn_message_decode(pn_message_t *msg, const char *bytes, size_t siz
  */
 PN_EXTERN int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size);
 
+/**
+* @deprecated
+*/
+PN_EXTERN uint32_t pn_message_get_format(pn_message_t *message);
+
+/**
+* @deprecated
+*/
+PN_EXTERN int pn_message_set_format(pn_message_t *message, uint32_t format);
+
 /** @}
  */
 

@@ -358,7 +358,7 @@ void source_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t t
     {
       pn_link_t *link = pn_event_link(event);
       while (pn_link_credit(link) > 0 && src->remaining > 0) {
-        pn_delivery_t *dlv = pn_delivery(link, pn_dtag("", 0));
+        pn_delivery_t *dlv = pn_delivery(link, pn_dtag("", 0, 0));
         assert(dlv);
         pn_delivery_settle(dlv);
         src->remaining--;
