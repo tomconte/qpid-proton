@@ -26,7 +26,7 @@
 #include "platform.h"
 #include "mbed/tcpsocketconnection_c.h"
 #include "mbed/logging.h"
-#include "CyaSSL/cyassl/ssl.h"
+#include "TLS_CyaSSL_no_cert/cyassl/ssl.h"
 
 // #define CYASSL_DEBUG
 
