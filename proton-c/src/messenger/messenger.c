@@ -924,8 +924,8 @@ static int pn_transport_config(pn_messenger_t *messenger,
     pn_ssl_domain_free( d );
   }
 
-  if (ctx->user) {
-    pn_sasl_t *sasl = pn_sasl(transport);
+  if (ctx->user || !pn_streq(messenger->client_sasl_mechanism, "ANONYMOUS")) {
+	  pn_sasl_t *sasl = pn_sasl(transport);
     if (ctx->pass) {
       pn_sasl_plain(sasl, ctx->user, ctx->pass);
     } else {
