@@ -216,12 +216,12 @@ ssize_t pn_recv(pn_io_t *io, pn_socket_t socket, void *buf, size_t size)
 		}
 
 		LOG_VERBOSE("received %d bytes\r\n", (int)count);
-		io->wouldblock = false;
+		io->wouldblock = (count == 0);
 	}
 
 	LOG_FUNC_END("pn_recv");
 
-	return count;
+	return (count == 0) ? -1 : count;
 }
 
 ssize_t pn_write(pn_io_t *io, pn_socket_t socket, const void *buf, size_t size)
