@@ -22,20 +22,31 @@
 #include "mbed.h"
 #include "mbedtime.h"
 #include "Timer.h"
+#include "logging.h"
 
 static Timer timer;
+static int millisecondsElapsed = 0;
+static unsigned long oldValue = 0;
+static unsigned long micros = 0;
 
 extern "C" void mbedtime_init(void)
 {
-	timer.start();
+    timer.start();
+    oldValue = timer.read_ms();
+    micros = 0;
 }
 
 extern "C" void mbedtime_deinit(void)
 {
-	timer.stop();
+    timer.stop();
 }
 
 extern "C" unsigned long mbedtime_gettickcount(void)
 {
-	return timer.read_ms();
+    unsigned long newValue = timer.read_ms();
+    unsigned long deltaInMicros = (newValue - oldValue) + micros;
+    millisecondsElapsed += deltaInMicros / 1000;
+    micros = deltaInMicros % 1000;
+    oldValue = newValue;
+    return millisecondsElapsed;
 }
