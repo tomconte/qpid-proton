@@ -19,13 +19,13 @@
 *
 */
 
+#include <cstdint>
 #include "mbed.h"
 #include "mbedtime.h"
 #include "Timer.h"
-#include "logging.h"
 
 static Timer timer;
-static int millisecondsElapsed = 0;
+static int64_t millisecondsElapsed = 0;
 static unsigned long oldValue = 0;
 static unsigned long micros = 0;
 
@@ -41,12 +41,12 @@ extern "C" void mbedtime_deinit(void)
     timer.stop();
 }
 
-extern "C" unsigned long mbedtime_gettickcount(void)
+extern "C" int64_t mbedtime_gettickcount(void)
 {
     /* first we get the new value of the timer (the timer value is in microseconds). */
     unsigned long newValue = timer.read_ms();
 
-    /* next we compute how many micros have elapsed since the last time we took a timer snapshot and we add the leftover 
+    /* next we compute how many micros have elapsed since the last time we took a timer snapshot and we add the leftover
     microseconds from the last time we ran this computation. */
     unsigned long deltaInMicros = (newValue - oldValue) + micros;
 

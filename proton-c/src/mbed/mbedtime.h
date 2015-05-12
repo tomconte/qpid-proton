@@ -24,11 +24,14 @@
 
 #ifdef __cplusplus
 extern "C" {
+#include <cstdint>
+#else
+#include <stdint.h>
 #endif
 
 extern void mbedtime_init(void);
 extern void mbedtime_deinit(void);
-extern unsigned long mbedtime_gettickcount(void);
+extern int64_t mbedtime_gettickcount(void);
 
 #ifdef __cplusplus
 }
