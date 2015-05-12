@@ -44,18 +44,18 @@ extern "C" void mbedtime_deinit(void)
 
 extern "C" int64_t mbedtime_gettickcount(void)
 {
-    /* first we get the new value of the timer (the timer value is in carryOverMicroseconds). */
+    /* first we get the new value of the timer (the timer value is in microseconds). */
     unsigned long newTimerValue = timer.read_ms();
 
-    /* next we compute how many carryOverMicros have elapsed since the last time we took a timer snapshot and we add the leftover
-    carryOverMicroseconds from the last time we ran this computation. */
+    /* next we compute how many microseconds have elapsed since the last time we took a timer snapshot and we add the leftover
+    microseconds from the last time we ran this computation. */
     unsigned long deltaInMicros = (newTimerValue - oldTimerValue) + carryOverMicros;
 
     /* next we see how many milliseconds have elapsed and add them to our global milliseconds value that
     we give back to Proton. */
     millisecondsElapsed += deltaInMicros / 1000;
 
-    /* and finally we store the extra carryOverMicroseconds and we mark the current timer snapshot as being the last timer snapshot. */
+    /* and finally we store the extra microseconds and we mark the current timer snapshot as being the last timer snapshot. */
     carryOverMicros = deltaInMicros % 1000;
     oldTimerValue = newTimerValue;
 
