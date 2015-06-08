@@ -257,7 +257,7 @@ ssize_t pn_read(pn_io_t *io, pn_socket_t socket, void *buf, size_t size)
 void pn_close(pn_io_t *io, pn_socket_t socket)
 {
 	LOG_FUNC_START("pn_close");
-	if ((io == NULL) || (socket == NULL))
+	if ((io == NULL) || (socket == PN_INVALID_SOCKET))
 	{
 		LOG_ERROR("NULL argument, io=%p, socket=%p\r\n", io, socket);
 	}
