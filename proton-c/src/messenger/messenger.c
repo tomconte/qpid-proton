@@ -21,6 +21,7 @@
 
 #include <proton/messenger.h>
 
+#include <proton/message.h>
 #include <proton/connection.h>
 #include <proton/delivery.h>
 #include <proton/event.h>
@@ -923,14 +924,13 @@ static int pn_transport_config(pn_messenger_t *messenger,
     pn_ssl_domain_free( d );
   }
 
-  if (ctx->user) {
-  pn_sasl_t *sasl = pn_sasl(transport);
+  if (ctx->user || !pn_streq(messenger->client_sasl_mechanism, "ANONYMOUS")) {
+	  pn_sasl_t *sasl = pn_sasl(transport);
     if (ctx->pass) {
-    pn_sasl_plain(sasl, ctx->user, ctx->pass);
-  } else {
+      pn_sasl_plain(sasl, ctx->user, ctx->pass);
+    } else {
     pn_sasl_mechanisms(sasl, messenger->client_sasl_mechanism);
-    pn_sasl_client(sasl);
-  }
+    }
   }
 
   return 0;
@@ -1164,14 +1164,14 @@ void pn_messenger_process_link(pn_messenger_t *messenger, pn_event_t *event)
   }
 }
 
-int pni_pump_out(pn_messenger_t *messenger, const char *address, pn_link_t *sender);
+int pni_pump_out(pn_messenger_t *messenger, const char *address, pn_link_t *sender, uint32_t format);
 
 void pn_messenger_process_flow(pn_messenger_t *messenger, pn_event_t *event)
 {
   pn_link_t *link = pn_event_link(event);
 
   if (pn_link_is_sender(link)) {
-    pni_pump_out(messenger, pn_terminus_get_address(pn_link_target(link)), link);
+    pni_pump_out(messenger, pn_terminus_get_address(pn_link_target(link)), link, (uint32_t)0);
   } else {
     // account for any credit left over after draining links has completed
     if (pn_link_get_drain(link)) {
@@ -1837,7 +1837,7 @@ int pni_bump_out(pn_messenger_t *messenger, const char *address)
   return 0;
 }
 
-int pni_pump_out(pn_messenger_t *messenger, const char *address, pn_link_t *sender)
+int pni_pump_out(pn_messenger_t *messenger, const char *address, pn_link_t *sender, uint32_t format)
 {
   pni_entry_t *entry = pni_store_get(messenger->outgoing, address);
   if (!entry) {
@@ -1855,7 +1855,7 @@ int pni_pump_out(pn_messenger_t *messenger, const char *address, pn_link_t *send
   void *ptr = &tag;
   uint64_t next = messenger->next_tag++;
   *((uint64_t *) ptr) = next;
-  pn_delivery_t *d = pn_delivery(sender, pn_dtag(tag, 8));
+  pn_delivery_t *d = pn_delivery(sender, pn_dtag(tag, 8, format));
   pni_entry_set_delivery(entry, d);
   ssize_t n = pn_link_send(sender, encoded, size);
   if (n < 0) {
@@ -1955,7 +1955,7 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
           return 0;
         }
       } else {
-        return pni_pump_out(messenger, address, sender);
+          return pni_pump_out(messenger, address, sender, pn_message_get_format(msg));
       }
     }
   }
@@ -2382,7 +2382,9 @@ pn_messenger_set_client_sasl_mechanism(pn_messenger_t *messenger,
                                        const char* mechanism)
 {
     if ((!messenger) || (mechanism == NULL))
-		return PN_ARG_ERR;
+    {
+        return PN_ARG_ERR;
+    }
     else 
     {
         if (messenger->client_sasl_mechanism != NULL)

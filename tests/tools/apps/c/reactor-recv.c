@@ -224,7 +224,7 @@ void connection_dispatch(pn_handler_t *h, pn_event_t *event, pn_event_type_t typ
             char tag[8];
             void *ptr = &tag;
             *((uint64_t *) ptr) = cc->global->sent;
-            pn_delivery_t *dlv = pn_delivery(rl, pn_dtag(tag, 8));
+            pn_delivery_t *dlv = pn_delivery(rl, pn_dtag(tag, 8, 0));
             size_t size = cc->global->encoded_data_size;
             int err = pn_message_encode(msg, cc->global->encoded_data, &size);
             check(err == 0, "message encoding error");

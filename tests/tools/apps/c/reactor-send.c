@@ -171,7 +171,7 @@ void sender_dispatch(pn_handler_t *h, pn_event_t *event, pn_event_type_t type)
         char tag[8];
         void *ptr = &tag;
         *((uint64_t *) ptr) = sc->sent;
-        pn_delivery_t *dlv = pn_delivery(snd, pn_dtag(tag, 8));
+        pn_delivery_t *dlv = pn_delivery(snd, pn_dtag(tag, 8, 0));
 
         // setup the message to send
         pn_message_t *msg = sc->message;

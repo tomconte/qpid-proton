@@ -76,6 +76,7 @@ struct pn_message_t {
   uint32_t delivery_count;
 
   uint8_t priority;
+  uint32_t format;
 
   bool durable;
   bool first_acquirer;
@@ -350,6 +351,8 @@ pn_message_t *pn_message()
 
   msg->parser = NULL;
   msg->error = pn_error();
+  msg->format = 0;
+
   return msg;
 }
 
@@ -816,32 +819,107 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
     pn_data_exit(msg->data);
   }
 
-  if (pn_data_size(msg->body)) {
-    pn_data_rewind(msg->body);
-    pn_data_next(msg->body);
-    pn_type_t body_type = pn_data_type(msg->body);
-    pn_data_rewind(msg->body);
-
-    pn_data_put_described(msg->data);
-    pn_data_enter(msg->data);
-    if (msg->inferred) {
-      switch (body_type) {
-      case PN_BINARY:
-        pn_data_put_ulong(msg->data, DATA);
-        break;
-      case PN_LIST:
-        pn_data_put_ulong(msg->data, AMQP_SEQUENCE);
-        break;
-      default:
-        pn_data_put_ulong(msg->data, AMQP_VALUE);
-        break;
+  if (msg->format == 0x80013700)
+  {
+      /*by convention, Microsoft messages can contain only pn_binary_data (1 or more)*/
+      /*by convention, each of these binary data needs to be put in its own application-data section*/
+      /*see 3.2 Message Format of AMQP ISO doc*/
+      /*in PROTON-ese, the msg will present several chunks, their number given by pn_data_size*/
+      /*pn_data_rewind + n calls to pn_data_next yield the nth chunk of binary data*/
+      if (msg->inferred != true)
+      {
+          pn_data_clear(msg->data);
+          err = pn_error_format(msg->error, -__LINE__, "msg format error, not inferred");
+          return err;
       }
-    } else {
-      pn_data_put_ulong(msg->data, AMQP_VALUE);
-    }
-    pn_data_append(msg->data, msg->body);
+      else
+      {
+          size_t i; 
+          for (i = 0; i < pn_data_size(msg->body); i++)
+          {
+              size_t j;
+              pn_data_t *temp;
+              pn_data_rewind(msg->body);
+              for (j = 0; j <= i; j++)
+              {
+                  (void)pn_data_next(msg->body);
+              }
+              
+              temp = pn_data(0);
+              if (temp == NULL)
+              {
+                  pn_data_clear(msg->data);
+                  err = pn_error_format(msg->error, -__LINE__, "unable to create a temporary pn_data_t");
+                  return err;
+              }
+              else
+              {
+                  pn_type_t body_type = pn_data_type(msg->body);
+                  if (body_type != PN_BINARY)
+                  {
+                      pn_data_free(temp);
+                      pn_data_clear(msg->data);
+                      err = pn_error_format(msg->error, -__LINE__, "msg format error, %d chunk is not binary", (int)i);
+                      return err;
+                  }
+                  else
+                  {
+                      if (pn_data_put_binary(temp, pn_data_get_binary(msg->body)) != 0)
+                      {
+                          pn_data_free(temp);
+                          pn_data_clear(msg->data);
+                          err = pn_error_format(msg->error, -__LINE__, "cannot execute pn_data_put_binary");
+                          return err;
+                      }
+                      else
+                      {
+                          pn_data_put_described(msg->data); /*apparently cannot fail, always return 0*/
+                          pn_data_enter(msg->data); /*cannot fail*/
+                          pn_data_put_ulong(msg->data, DATA); /*cannot fail, always returns 0*/
+                          if ((err = pn_data_append(msg->data, temp)) != 0)
+                          {
+                              pn_data_free(temp);
+                              pn_data_clear(msg->data);
+                              pn_error_format(msg->error, -__LINE__, "pn_data_append failed, returned %d", (int)i);
+                              return err;
+                          }
+                      }
+                  }
+                  pn_data_free(temp);
+              }
+          }
+      }
   }
+  else
+  {
+      if (pn_data_size(msg->body)) {
+          pn_data_rewind(msg->body);
+          pn_data_next(msg->body);
+          pn_type_t body_type = pn_data_type(msg->body);
+          pn_data_rewind(msg->body);
 
+          pn_data_put_described(msg->data);
+          pn_data_enter(msg->data);
+          if (msg->inferred) {
+              switch (body_type) {
+              case PN_BINARY:
+                  pn_data_put_ulong(msg->data, DATA);
+                  break;
+              case PN_LIST:
+                  pn_data_put_ulong(msg->data, AMQP_SEQUENCE);
+                  break;
+              default:
+                  pn_data_put_ulong(msg->data, AMQP_VALUE);
+                  break;
+              }
+          }
+          else {
+              pn_data_put_ulong(msg->data, AMQP_VALUE);
+          }
+          pn_data_append(msg->data, msg->body);
+      }
+  }
+  
   size_t remaining = *size;
   ssize_t encoded = pn_data_encode(msg->data, bytes, remaining);
   if (encoded < 0) {
@@ -881,4 +959,17 @@ pn_data_t *pn_message_properties(pn_message_t *msg)
 pn_data_t *pn_message_body(pn_message_t *msg)
 {
   return msg ? msg->body : NULL;
+}
+
+uint32_t pn_message_get_format(pn_message_t *msg)
+{
+	return msg ? msg->format : 0;
+}
+
+int pn_message_set_format(pn_message_t *msg, uint32_t format)
+{
+	if (!msg) return PN_ARG_ERR;
+
+	msg->format = format;
+	return 0;
 }
