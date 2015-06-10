@@ -38,6 +38,7 @@ extern "C" {
 extern void mbed_log_init(void);
 extern int mbed_log(const char*, ...);
 extern void mbed_log_buffer(const void* data, int length);
+extern void mbed_log_memory(void);
 
 #ifdef LOG_FUNC_CALLS_ENABLED
 #define LOG_FUNC_START(name) mbed_log(name "- Start\r\n")

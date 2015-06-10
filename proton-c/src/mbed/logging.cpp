@@ -63,3 +63,21 @@ void mbed_log_buffer(const void* data, size_t length)
 		mbed_log("%02x ", ((unsigned char*)data)[i]);
 	}
 }
+
+int CaptureLine(void* pBuffer, char const* pFormatString, ...)
+{
+    char*   pStringEnd = (char*)pBuffer + strlen((char*)pBuffer);
+    va_list valist;
+    
+    va_start(valist, pFormatString);
+    
+    return vsprintf(pStringEnd, pFormatString, valist);
+}
+
+void mbed_log_memory(void)
+{
+	char OutputBuffer[256];
+	OutputBuffer[0] = '\0';
+    __heapstats(CaptureLine, OutputBuffer);
+    mbed_log(OutputBuffer);
+}
