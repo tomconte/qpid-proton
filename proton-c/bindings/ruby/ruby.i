@@ -275,8 +275,8 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 
 %rename(pn_delivery) wrap_pn_delivery;
 %inline %{
-  pn_delivery_t *wrap_pn_delivery(pn_link_t *link, char *STRING, size_t LENGTH) {
-    return pn_delivery(link, pn_dtag(STRING, LENGTH));
+  pn_delivery_t *wrap_pn_delivery(pn_link_t *link, char *STRING, size_t LENGTH, uint32_t FORMAT) {
+    return pn_delivery(link, pn_dtag(STRING, LENGTH, FORMAT));
   }
 %}
 %ignore pn_delivery;
