@@ -2238,6 +2238,17 @@ int pn_messenger_reject(pn_messenger_t *messenger, pn_tracker_t tracker, int fla
                           PN_STATUS_REJECTED, flags, false, false);
 }
 
+int pn_messenger_release(pn_messenger_t *messenger, pn_tracker_t tracker, int flags)
+{
+    if (pn_tracker_direction(tracker) != INCOMING) {
+        return pn_error_format(messenger->error, PN_ARG_ERR,
+            "invalid tracker, incoming tracker required");
+    }
+
+    return pni_store_update(messenger->incoming, pn_tracker_sequence(tracker),
+        PN_STATUS_RELEASED, flags, false, false);
+}
+
 PN_EXTERN pn_link_t *pn_messenger_tracker_link(pn_messenger_t *messenger,
                                                pn_tracker_t tracker)
 {

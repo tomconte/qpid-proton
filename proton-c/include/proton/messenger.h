@@ -773,6 +773,8 @@ PN_EXTERN pn_subscription_t *pn_messenger_incoming_subscription(pn_messenger_t *
  */
 PN_EXTERN int pn_messenger_accept(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
 
+PN_EXTERN int pn_messenger_release(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
+
 /**
  * Signal unsuccessful processing of message(s).
  *

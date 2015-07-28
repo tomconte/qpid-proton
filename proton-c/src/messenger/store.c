@@ -402,6 +402,9 @@ int pni_store_update(pni_store_t *store, pn_sequence_t id, pn_status_t status,
             case PN_STATUS_REJECTED:
               pn_delivery_update(d, PN_REJECTED);
               break;
+            case PN_STATUS_RELEASED:
+                pn_delivery_update(d, PN_RELEASED);
+                break;
             default:
               break;
             }
