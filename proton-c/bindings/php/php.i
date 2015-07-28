@@ -191,8 +191,8 @@ ssize_t pn_sasl_send(pn_sasl_t *sasl, char *STRING, size_t LENGTH);
 // in PHP:   delivery = pn_delivery(link, "binary safe string");
 //
 %inline %{
-  pn_delivery_t *wrap_pn_delivery(pn_link_t *link, char *STRING, size_t LENGTH) {
-    return pn_delivery(link, pn_dtag(STRING, LENGTH));
+  pn_delivery_t *wrap_pn_delivery(pn_link_t *link, char *STRING, size_t LENGTH, uint32_t FORMAT) {
+    return pn_delivery(link, pn_dtag(STRING, LENGTH, FORMAT));
   }
 %}
 %ignore pn_delivery;
