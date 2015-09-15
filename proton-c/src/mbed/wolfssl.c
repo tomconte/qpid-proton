@@ -26,9 +26,10 @@
 #include "platform.h"
 #include "mbed/tcpsocketconnection_c.h"
 #include "mbed/logging.h"
-#include "TLS_CyaSSL_no_cert/cyassl/ssl.h"
+#include "wolfssl/ssl.h"
+#include "util.h"
 
-//#define CYASSL_DEBUG
+//#define WOLFSSL_DEBUG
 
 #define APP_BUF_SIZE    (4096)
 
@@ -44,6 +45,7 @@ typedef struct pn_ssl_session_t pn_ssl_session_t;
 struct pn_ssl_domain_t {
     int   ref_count;
     pn_ssl_mode_t mode;
+    const char* trusted_CAs;
 };
 
 typedef struct pn_ssl_t pn_ssl_t;
@@ -53,10 +55,10 @@ struct pn_ssl_t {
     pn_ssl_domain_t  *domain;
     char *peer_hostname;
 
-    struct CYASSL_CTX* ctx;
-    struct CYASSL    * ssl;
+    struct WOLFSSL_CTX* ctx;
+    struct WOLFSSL    * ssl;
 
-    /* This buffer is holding crypted data produced by the CyaSSL library */
+    /* This buffer is holding crypted data produced by the wolfSSL library */
     unsigned char inputBuffer[APP_BUF_SIZE];
     unsigned char outputBuffer[APP_BUF_SIZE];
     unsigned char decrypted[APP_BUF_SIZE];
@@ -71,13 +73,13 @@ struct pn_ssl_t {
 
 extern TCPSOCKETCONNECTION_HANDLE connHandle;
 
-static int SocketReceive(CYASSL* cyassl, char *buf, int sz, void* ctx)
+static int SocketReceive(WOLFSSL* wolfssl, char *buf, int sz, void* ctx)
 {
     int n = 0;
     int i;
     pn_ssl_t* pnssl = (pn_ssl_t*)ctx;
 
-    mbed_log("cyassl=%p, ctx=%p, sz=%d, inBytes=%d\r\n", cyassl, ctx, sz, pnssl->inBytes);
+    mbed_log("wolfssl=%p, ctx=%p, sz=%d, inBytes=%d\r\n", wolfssl, ctx, sz, pnssl->inBytes);
     LOG_FUNC_START("SocketReceive");
     LOG_VERBOSE("ctx=%p, sz=%d, inBytes=%d\r\n", ctx, sz, pnssl->inBytes);
 
@@ -112,7 +114,7 @@ static int SocketReceive(CYASSL* cyassl, char *buf, int sz, void* ctx)
 
         if (n == 0)
         {
-            return CYASSL_CBIO_ERR_WANT_READ;
+            return WOLFSSL_CBIO_ERR_WANT_READ;
         }
     }
 
@@ -121,7 +123,7 @@ static int SocketReceive(CYASSL* cyassl, char *buf, int sz, void* ctx)
     return n;
 }
 
-static int SocketSend(CYASSL* cyassl, char *buf, int sz, void* ctx)
+static int SocketSend(WOLFSSL* wolfssl, char *buf, int sz, void* ctx)
 {
     int n;
     pn_ssl_t* pnssl = (pn_ssl_t*)ctx;
@@ -192,6 +194,7 @@ pn_ssl_t *pn_ssl(pn_transport_t *transport)
         ssl->ctx = NULL;
         ssl->peer_hostname = NULL;
         ssl->trace = NULL;
+        ssl->domain = NULL;
 
         transport->ssl = (pni_ssl_t*)ssl;
         LOG_VERBOSE("returning %p\r\n", ssl);
@@ -201,6 +204,8 @@ pn_ssl_t *pn_ssl(pn_transport_t *transport)
 
     return ssl;
 }
+
+#include "certs.h"
 
 /*------------------------------------------------------------------------------
 -- pn_ssl_init
@@ -215,18 +220,18 @@ pn_ssl_t *pn_ssl(pn_transport_t *transport)
 ------------------------------------------------------------------------------*/
 int pn_ssl_init(pn_ssl_t* ssl, pn_ssl_domain_t* domain, const char* session_id)
 {
-    CYASSL_METHOD* SSLmethod;
+    WOLFSSL_METHOD* SSLmethod;
 
     LOG_FUNC_START("pn_ssl_init");
 
     if (!ssl || !domain || ssl->domain)
     {
-        LOG_VERBOSE("AMQP:                       pn_ssl_init() error, objects not intialized, ssl=%p, domain=%p, ssl->domain=%p \n\r", ssl, domain, ssl->domain);
+        LOG_ERROR("AMQP:                       pn_ssl_init() error, objects not intialized, ssl=%p, domain=%p, ssl->domain=%p \n\r", ssl, domain, ssl->domain);
         return -1;
     }
 
-#ifdef CYASSL_DEBUG
-    CyaSSL_Debugging_ON();
+#ifdef WOLFSSL_DEBUG
+    wolfSSL_Debugging_ON();
 #endif
 
     ssl->domain = domain;
@@ -237,42 +242,47 @@ int pn_ssl_init(pn_ssl_t* ssl, pn_ssl_domain_t* domain, const char* session_id)
         LOG_INFO("Not supporting resume, reinitializing...\r\n");
     }
 
-    SSLmethod = CyaTLSv1_client_method();
-    ssl->ctx = CyaSSL_CTX_new((CYASSL_METHOD *)SSLmethod);
+    SSLmethod = wolfTLSv1_client_method();
+    ssl->ctx = wolfSSL_CTX_new((WOLFSSL_METHOD *)SSLmethod);
 
     if (ssl->ctx == NULL)
     {
-        LOG_ERROR("unable to get ctx");
+        LOG_ERROR("unable to get ctx\r\n");
         return -1;
     }
 
-    CyaSSL_CTX_set_verify(ssl->ctx, SSL_VERIFY_NONE, 0);
-    CyaSSL_SetIORecv(ssl->ctx, SocketReceive);
-    CyaSSL_SetIOSend(ssl->ctx, SocketSend);
+    if (wolfSSL_CTX_load_verify_buffer(ssl->ctx, (unsigned char*)domain->trusted_CAs, strlen(domain->trusted_CAs) + 1, SSL_FILETYPE_PEM) != SSL_SUCCESS)
+    {
+        LOG_ERROR("unable to load certs\r\n");
+        return -1;
+    }
+
+    wolfSSL_SetIORecv(ssl->ctx, SocketReceive);
+    wolfSSL_SetIOSend(ssl->ctx, SocketSend);
 
     if (ssl->ssl == NULL)
     {
-        ssl->ssl = CyaSSL_new(ssl->ctx);
+        ssl->ssl = wolfSSL_new(ssl->ctx);
         if (ssl->ssl == NULL)
         {
             LOG_ERROR("unable to get SSL object");
-            CyaSSL_CTX_free(ssl->ctx);
-            CyaSSL_Cleanup();
+            wolfSSL_CTX_free(ssl->ctx);
+            wolfSSL_Cleanup();
             return -1;
         }
     }
 
-    CyaSSL_SetIOReadCtx(ssl->ssl, ssl);
-    CyaSSL_SetIOWriteCtx(ssl->ssl, ssl);
+    wolfSSL_SetIOReadCtx(ssl->ssl, ssl);
+    wolfSSL_SetIOWriteCtx(ssl->ssl, ssl);
 
     LOG_VERBOSE("ctx=%p, ssl=%p, ssl->ctx->CBIORecv, CBIOSend=%p, %p\n",
         ssl->ctx, ssl->ssl, SocketReceive, SocketSend);
-    if (CyaSSL_connect(ssl->ssl) != SSL_SUCCESS)
+    if (wolfSSL_connect(ssl->ssl) != SSL_SUCCESS)
     {
         LOG_ERROR("SSL_connect failed");
-        CyaSSL_free(ssl->ssl);
-        CyaSSL_CTX_free(ssl->ctx);
-        CyaSSL_Cleanup();
+        wolfSSL_free(ssl->ssl);
+        wolfSSL_CTX_free(ssl->ctx);
+        wolfSSL_Cleanup();
         return -1;
     }
 
@@ -322,7 +332,7 @@ ssize_t pn_ssl_input(struct pn_transport_t *transport, unsigned int layer, const
     {
         while (true)
         {
-            int toRead = CyaSSL_peek(ssl->ssl, ssl->decrypted + ssl->appBytesPos, 1);
+            int toRead = wolfSSL_peek(ssl->ssl, ssl->decrypted + ssl->appBytesPos, 1);
             if (toRead + ssl->appBytesPos > APP_BUF_SIZE)
             {
                 LOG_VERBOSE("overrun, ssl->appBytesPos = %d\r\n", (int)ssl->appBytesPos);
@@ -335,7 +345,7 @@ ssize_t pn_ssl_input(struct pn_transport_t *transport, unsigned int layer, const
             }
             else
             {
-                int res = CyaSSL_read(ssl->ssl, ssl->decrypted + ssl->appBytesPos, 1);
+                int res = wolfSSL_read(ssl->ssl, ssl->decrypted + ssl->appBytesPos, 1);
                 LOG_VERBOSE("decrypt result=%d\r\n", res);
                 if (res > 0)
                 {
@@ -390,7 +400,7 @@ ssize_t pn_ssl_output(struct pn_transport_t *transport, unsigned int layer, char
     if (app_bytes > 0)
     {
         LOG_VERBOSE("Got %d bytes from upper layer\r\n", (int)app_bytes);
-        int encryptedBytes = CyaSSL_write(ssl->ssl, output_data, app_bytes);
+        int encryptedBytes = wolfSSL_write(ssl->ssl, output_data, app_bytes);
         LOG_VERBOSE("Got %d encrypted bytes\r\n", (int)encryptedBytes);
         memcpy(output_data, ssl->outputBuffer, ssl->outBytes);
         len = ssl->outBytes;
@@ -467,6 +477,7 @@ pn_ssl_domain_t *pn_ssl_domain(pn_ssl_mode_t mode)
 
     domain->ref_count = 1;
     domain->mode = mode;
+    domain->trusted_CAs = NULL;
 
     //  Init SSL library
     LOG_VERBOSE("AMQP:                       Initializing SSL client... \n\r");
@@ -511,6 +522,7 @@ void pn_ssl_domain_free(pn_ssl_domain_t *d)
         d->ref_count--;
         if (d->ref_count == 0)
         {
+            free(d->trusted_CAs);
             free(d);
         }
     }
@@ -543,6 +555,11 @@ int pn_ssl_domain_set_trusted_ca_db(pn_ssl_domain_t *domain,
         return -1;
     }
 
+    if (certificate_db != NULL)
+    {
+        domain->trusted_CAs = pn_strdup(certificate_db);
+    }
+
     // ignored, we only do client for now
     LOG_FUNC_END("pn_ssl_domain_set_trusted_ca_db");
     return 0;
@@ -562,13 +579,13 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
     {
     case PN_SSL_VERIFY_PEER:
     case PN_SSL_VERIFY_PEER_NAME:
-        LOG_ERROR("SSL Peer Verification: not supported.\r\n");
+        //LOG_ERROR("SSL Peer Verification: not supported.\r\n");
 
         break;
 
     case PN_SSL_ANONYMOUS_PEER:
 
-        /* disable peer verification with cyassl */
+        /* disable peer verification with wolfssl */
 
         break;
 
@@ -679,7 +696,7 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *hostname, size_t *bufsize)
 
 pn_ssl_resume_status_t pn_ssl_resume_status(pn_ssl_t *s)
 {
-    /* This API is not implemented for cyassl for now */
+    /* This API is not implemented for wolfssl for now */
 
     LOG_FUNC_START("pn_ssl_resume_status");
     LOG_FUNC_END("pn_ssl_resume_status");
@@ -689,7 +706,7 @@ pn_ssl_resume_status_t pn_ssl_resume_status(pn_ssl_t *s)
 
 bool pn_ssl_allow_unsecured(pn_transport_t *transport)
 {
-    /* This API is not implemented for cyassl for now */
+    /* This API is not implemented for wolfssl for now */
 
     LOG_FUNC_START("pn_ssl_allow_unsecured");
     LOG_FUNC_END("pn_ssl_allow_unsecured");
