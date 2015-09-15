@@ -205,8 +205,6 @@ pn_ssl_t *pn_ssl(pn_transport_t *transport)
     return ssl;
 }
 
-#include "certs.h"
-
 /*------------------------------------------------------------------------------
 -- pn_ssl_init
 --
