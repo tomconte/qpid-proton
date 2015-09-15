@@ -925,11 +925,11 @@ static int pn_transport_config(pn_messenger_t *messenger,
   }
 
   if (ctx->user || !pn_streq(messenger->client_sasl_mechanism, "ANONYMOUS")) {
-	  pn_sasl_t *sasl = pn_sasl(transport);
+    pn_sasl_t *sasl = pn_sasl(transport);
     if (ctx->pass) {
       pn_sasl_plain(sasl, ctx->user, ctx->pass);
     } else {
-    pn_sasl_mechanisms(sasl, messenger->client_sasl_mechanism);
+     pn_sasl_mechanisms(sasl, messenger->client_sasl_mechanism);
     }
   }
 
@@ -2386,22 +2386,4 @@ pn_messenger_set_ssl_peer_authentication_mode(pn_messenger_t *messenger,
     return PN_ARG_ERR;
   messenger->ssl_peer_authentication_mode = mode;
   return 0;
-}
-
-PN_EXTERN int
-pn_messenger_set_client_sasl_mechanism(pn_messenger_t *messenger,
-                                       const char* mechanism)
-{
-    if ((!messenger) || (mechanism == NULL))
-    {
-        return PN_ARG_ERR;
-    }
-    else 
-    {
-        if (messenger->client_sasl_mechanism != NULL)
-        {
-            free(messenger->client_sasl_mechanism);
-        }
-        return (messenger->client_sasl_mechanism = pn_strdup(mechanism)) != NULL ? 0 : PN_ERR;
-    }
 }
