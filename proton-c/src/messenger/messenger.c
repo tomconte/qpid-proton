@@ -1714,7 +1714,7 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address,
   } else {
 	  if (filter != NULL)
 	  {
-		  pn_data_copy(pn_terminus_filter(pn_link_source(link)), filter);
+		  pn_data_copy(pn_terminus_filter(pn_link_target(link)), filter);
 	  }
     pn_terminus_set_address(pn_link_target(link), name);
     pn_terminus_set_address(pn_link_source(link), name);
