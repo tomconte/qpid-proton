@@ -473,6 +473,16 @@ PN_EXTERN bool pn_messenger_stopped(pn_messenger_t *messenger);
 PN_EXTERN pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char *source);
 
 /**
+* Subscribes a messenger to messages from the specified source.
+*
+* @param[in] messenger the messenger to subscribe
+* @param[in] source
+* @param[in] filter
+* @return a subscription
+*/
+PN_EXTERN pn_subscription_t *pn_messenger_subscribe_with_filter(pn_messenger_t *messenger, const char *source, pn_data_t* filter);
+
+/**
  * Subscribes a messenger to messages from the specified source with the given
  * timeout for the subscription's lifetime.
  *
@@ -480,11 +490,12 @@ PN_EXTERN pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, c
  * @param[in] source
  * @param[in] timeout the maximum time to keep the subscription alive once the
  *            link is closed.
+ * @param[in] filter the filter passed in the source described type of the attach frame
  * @return a subscription
  */
 PN_EXTERN pn_subscription_t *
 pn_messenger_subscribe_ttl(pn_messenger_t *messenger, const char *source,
-                           pn_seconds_t timeout);
+                           pn_seconds_t timeout, pn_data_t* filter);
 
 /**
  * Get a link based on link name and whether the link is a sender or receiver

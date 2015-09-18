@@ -1673,7 +1673,7 @@ PN_EXTERN pn_link_t *pn_messenger_get_link(pn_messenger_t *messenger,
 }
 
 pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address,
-                             bool sender, pn_seconds_t timeout)
+                             bool sender, pn_seconds_t timeout, pn_data_t* filter)
 {
   char *name = NULL;
   pn_connection_t *connection = pn_messenger_resolve(messenger, address, &name);
@@ -1712,6 +1712,10 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address,
       pn_terminus_set_dynamic(pn_link_source(link), true);
     }
   } else {
+	  if (filter != NULL)
+	  {
+		  pn_data_copy(pn_terminus_filter(pn_link_source(link)), filter);
+	  }
     pn_terminus_set_address(pn_link_target(link), name);
     pn_terminus_set_address(pn_link_source(link), name);
   }
@@ -1735,25 +1739,31 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address,
 }
 
 pn_link_t *pn_messenger_source(pn_messenger_t *messenger, const char *source,
-                               pn_seconds_t timeout)
+                               pn_seconds_t timeout, pn_data_t* filter)
 {
-  return pn_messenger_link(messenger, source, false, timeout);
+  return pn_messenger_link(messenger, source, false, timeout, filter);
 }
 
 pn_link_t *pn_messenger_target(pn_messenger_t *messenger, const char *target,
                                pn_seconds_t timeout)
 {
-  return pn_messenger_link(messenger, target, true, timeout);
+  return pn_messenger_link(messenger, target, true, timeout, NULL);
 }
 
 pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char *source)
 {
-  return pn_messenger_subscribe_ttl(messenger, source, 0);
+  return pn_messenger_subscribe_ttl(messenger, source, 0, NULL);
+}
+
+pn_subscription_t *pn_messenger_subscribe_with_filter(pn_messenger_t *messenger, const char *source, pn_data_t* filter)
+{
+  return pn_messenger_subscribe_ttl(messenger, source, 0, filter);
 }
 
 pn_subscription_t *pn_messenger_subscribe_ttl(pn_messenger_t *messenger,
                                               const char *source,
-                                              pn_seconds_t timeout)
+                                              pn_seconds_t timeout,
+											  pn_data_t* filter)
 {
   pni_route(messenger, source);
   if (pn_error_code(messenger->error)) return NULL;
@@ -1771,7 +1781,7 @@ pn_subscription_t *pn_messenger_subscribe_ttl(pn_messenger_t *messenger,
       return NULL;
     }
   } else {
-    pn_link_t *src = pn_messenger_source(messenger, source, timeout);
+    pn_link_t *src = pn_messenger_source(messenger, source, timeout, filter);
     if (!src) return NULL;
     pn_link_ctx_t *ctx = (pn_link_ctx_t *) pn_link_get_context( src );
     return ctx ? ctx->subscription : NULL;
