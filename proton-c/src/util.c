@@ -164,7 +164,7 @@ void pni_parse_url(char *url, char **scheme, char **user, char **pass, char **ho
     *path = slash + 1;
   }
 
-  char *at = strchr(url, '@');
+  char *at = strrchr(url, '@');
   if (at) {
     *at = '\0';
     char *up = url;
